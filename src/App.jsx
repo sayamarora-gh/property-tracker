@@ -101,10 +101,11 @@ async function analyseWithClaude(text) {
       "Content-Type": "application/json",
       "x-api-key": apiKey,
       "anthropic-version": "2023-06-01",
+      "anthropic-beta": "interleaved-thinking-2025-05-14",
       "anthropic-dangerous-direct-browser-calls": "true",
     },
     body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-sonnet-4-5-20251001",
       max_tokens: 1500,
       system: SYSTEM_PROMPT,
       messages: [{ role: "user", content: `Analyse this property listing:\n\n${text}` }],
