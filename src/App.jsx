@@ -91,32 +91,16 @@ Analyse the listing and respond ONLY with valid JSON (no markdown, no preamble, 
   "redFlags": ["flag 1"] or []
 }`;
 
-async function analyseWithClaude(text) {
-  const apiKey = localStorage.getItem("claude-api-key");
-  if (!apiKey) throw new Error("NO_API_KEY");
-
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
+async function analyseWithClaude(text, notes) {
+  const res = await fetch("/api/analyse", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-      "anthropic-beta": "interleaved-thinking-2025-05-14",
-      "anthropic-dangerous-direct-browser-calls": "true",
-    },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-5-20251001",
-      max_tokens: 1500,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: "user", content: `Analyse this property listing:\n\n${text}` }],
-    }),
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ listingText: text, notes: notes || "" }),
   });
-
-  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  if (!res.ok) throw new Error(`Server error: ${res.status}`);
   const data = await res.json();
-  const raw = data.content?.map(b => b.text || "").join("") || "{}";
-  const clean = raw.replace(/```json|```/g, "").trim();
-  return JSON.parse(clean);
+  if (data.error) throw new Error(data.error);
+  return data;
 }
 
 // ── Small UI components ──────────────────────────────────────────────────────
@@ -439,11 +423,7 @@ export default function App() {
       setListingText(""); setNotes("");
       setTab("tracker");
     } catch(e) {
-      if (e.message === "NO_API_KEY") {
-        setError("No API key set. Go to Settings to add your Anthropic API key.");
-      } else {
-        setError("Analysis failed. Make sure you paste enough listing details.");
-      }
+      setError("Analysis failed — " + e.message + ". Make sure you paste enough listing details.");
     }
     setLoading(false);
   };
