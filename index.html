@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Property Tracker · Victoria First Home Buyer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --navy:     #0D1F3C;
+    --navy-mid: #1B3461;
+    --teal:     #0E9E72;
+    --teal-lt:  #D1F5E8;
+    --amber:    #E8951A;
+    --amber-lt: #FEF3D0;
+    --red:      #C94A2B;
+    --red-lt:   #FCEAE5;
+    --slate:    #4A5568;
+    --slate-lt: #F7F9FC;
+    --border:   #DDE4EF;
+    --white:    #FFFFFF;
+  }
+
+  html, body {
+    height: 100%;
+    font-family: 'DM Sans', sans-serif;
+    background: var(--slate-lt);
+    color: var(--navy);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Layout ── */
+  .app { display: flex; flex-direction: column; min-height: 100vh; }
+
+  .header {
+    background: linear-gradient(135deg, var(--navy) 0%, var(--navy-mid) 100%);
+    padding: 20px 24px 0;
+    position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 4px 24px rgba(13,31,60,0.18);
+  }
+
+  .header-top {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 18px; flex-wrap: wrap;
+  }
+
+  .logo {
+    width: 42px; height: 42px; background: var(--teal); border-radius: 12px;
+    display: flex; align-items: center; justify-content: center; font-size: 22px;
+    flex-shrink: 0;
+  }
+
+  .header-title h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 18px; color: var(--white); letter-spacing: -0.01em;
+  }
+
+  .header-title p { font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 1px; }
+
+  .header-stats {
+    margin-left: auto; display: flex; gap: 20px; flex-wrap: wrap;
+  }
+
+  .stat { text-align: center; }
+  .stat-val { font-size: 22px; font-weight: 800; color: var(--white); line-height: 1; }
+  .stat-lbl { font-size: 10px; color: rgba(255,255,255,0.45); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 2px; }
+
+  .tabs { display: flex; gap: 2px; }
+  .tab {
+    background: transparent; border: none; color: rgba(255,255,255,0.55);
+    padding: 10px 18px; border-radius: 8px 8px 0 0; cursor: pointer;
+    font-size: 13px; font-weight: 600; font-family: 'DM Sans', sans-serif;
+    transition: all 0.15s;
+  }
+  .tab:hover { color: rgba(255,255,255,0.85); }
+  .tab.active { background: var(--white); color: var(--navy); }
+
+  .content { flex: 1; padding: 20px; max-width: 900px; margin: 0 auto; width: 100%; }
+
+  /* ── Panels ── */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* ── Filters ── */
+  .filters {
+    display: flex; gap: 10px; margin-bottom: 16px;
+    align-items: center; flex-wrap: wrap;
+  }
+
+  .filter-group {
+    display: flex; background: var(--white); border-radius: 8px;
+    border: 1px solid var(--border); overflow: hidden;
+  }
+
+  .filter-btn {
+    padding: 7px 14px; border: none; cursor: pointer;
+    font-size: 12px; font-weight: 600; font-family: 'DM Sans', sans-serif;
+    background: transparent; color: var(--slate); transition: all 0.15s;
+  }
+  .filter-btn.active { background: var(--navy); color: var(--white); }
+
+  .sort-wrap { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+  .sort-wrap label { font-size: 12px; color: var(--slate); }
+  .sort-wrap select {
+    border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px;
+    font-size: 12px; color: var(--navy); background: var(--white);
+    cursor: pointer; font-family: 'DM Sans', sans-serif;
+  }
+
+  /* ── Empty state ── */
+  .empty {
+    text-align: center; padding: 60px 20px;
+    background: var(--white); border-radius: 14px;
+    border: 2px dashed var(--border);
+  }
+  .empty-icon { font-size: 52px; margin-bottom: 12px; }
+  .empty h3 { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+  .empty p { font-size: 13px; color: var(--slate); margin-bottom: 20px; line-height: 1.6; }
+
+  /* ── Property card ── */
+  .card {
+    background: var(--white); border: 1px solid var(--border);
+    border-radius: 14px; overflow: hidden; margin-bottom: 12px;
+    box-shadow: 0 2px 12px rgba(13,31,60,0.05);
+    transition: box-shadow 0.2s, transform 0.2s;
+  }
+  .card:hover { box-shadow: 0 8px 28px rgba(13,31,60,0.12); transform: translateY(-1px); }
+
+  .card-header {
+    background: linear-gradient(135deg, var(--navy) 0%, var(--navy-mid) 100%);
+    padding: 14px 18px; display: flex; align-items: flex-start; gap: 12px;
+  }
+  .card-header.missed {
+    background: linear-gradient(135deg, #2D1810 0%, #5C2D1A 100%);
+  }
+
+  .score-ring {
+    width: 52px; height: 52px; border-radius: 50%;
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; flex-shrink: 0;
+    border: 3px solid var(--teal);
+  }
+  .score-ring .score-num { font-size: 18px; font-weight: 800; color: var(--teal); line-height: 1; }
+  .score-ring .score-denom { font-size: 9px; color: rgba(255,255,255,0.4); }
+
+  .card-meta { flex: 1; min-width: 0; }
+  .card-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 5px; }
+
+  .badge {
+    display: inline-block; font-size: 10px; font-weight: 700;
+    letter-spacing: 0.05em; padding: 2px 8px; border-radius: 20px;
+    text-transform: uppercase;
+  }
+  .badge-buy   { background: var(--teal-lt);  color: var(--teal); }
+  .badge-watch { background: var(--amber-lt); color: var(--amber); }
+  .badge-pass  { background: var(--red-lt);   color: var(--red); }
+  .badge-missed{ background: var(--amber-lt); color: var(--amber); }
+  .badge-type  { background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.75); }
+
+  .card-address { font-size: 15px; font-weight: 700; color: var(--white); line-height: 1.3; }
+  .card-price   { font-size: 12px; color: rgba(255,255,255,0.55); margin-top: 2px; }
+
+  .card-actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .action-btn {
+    background: rgba(255,255,255,0.1); border: none; color: var(--white);
+    width: 32px; height: 32px; border-radius: 8px; cursor: pointer; font-size: 14px;
+    transition: background 0.15s;
+  }
+  .action-btn:hover { background: rgba(255,255,255,0.2); }
+
+  .card-pills {
+    display: flex; gap: 8px; flex-wrap: wrap;
+    padding: 12px 18px; border-bottom: 1px solid var(--border);
+  }
+  .pill {
+    background: var(--slate-lt); border-radius: 8px; padding: 6px 10px;
+    display: flex; flex-direction: column; gap: 1px; min-width: 60px;
+  }
+  .pill-lbl { font-size: 9px; color: var(--slate); text-transform: uppercase; letter-spacing: 0.05em; }
+  .pill-val { font-size: 13px; font-weight: 700; color: var(--navy); }
+
+  .card-summary { padding: 12px 18px; font-size: 13px; color: var(--slate); line-height: 1.65; }
+
+  .card-toggle {
+    width: 100%; background: var(--slate-lt); border: none;
+    border-top: 1px solid var(--border); padding: 8px;
+    cursor: pointer; font-size: 12px; color: var(--slate); font-weight: 600;
+    font-family: 'DM Sans', sans-serif; transition: background 0.15s;
+  }
+  .card-toggle:hover { background: var(--border); }
+
+  .card-details {
+    display: none; padding: 14px 18px;
+    display: none; grid-template-columns: 1fr 1fr; gap: 14px;
+  }
+  .card-details.open { display: grid; }
+
+  .detail-section h4 {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.05em; margin-bottom: 8px;
+  }
+  .detail-section.pros h4 { color: var(--teal); }
+  .detail-section.cons h4 { color: var(--red); }
+
+  .detail-item {
+    font-size: 12px; color: var(--slate); margin-bottom: 5px;
+    display: flex; gap: 6px; align-items: flex-start;
+  }
+  .detail-item .dot { flex-shrink: 0; margin-top: 1px; }
+
+  .red-flags {
+    grid-column: 1/-1; background: var(--red-lt);
+    border-radius: 8px; padding: 10px 12px;
+  }
+  .red-flags h4 { font-size: 11px; font-weight: 700; color: var(--red); margin-bottom: 6px; }
+  .red-flags .detail-item { color: var(--red); }
+
+  .card-notes {
+    grid-column: 1/-1; background: var(--amber-lt);
+    border-radius: 8px; padding: 10px 12px;
+  }
+  .card-notes h4 { font-size: 11px; font-weight: 700; color: var(--amber); margin-bottom: 4px; }
+  .card-notes p { font-size: 12px; color: var(--slate); }
+
+  .card-date {
+    grid-column: 1/-1; font-size: 11px; color: var(--border);
+  }
+
+  /* ── Add listing form ── */
+  .add-form {
+    background: var(--white); border-radius: 14px;
+    border: 1px solid var(--border); padding: 24px;
+  }
+  .add-form h2 { font-size: 17px; font-weight: 800; margin-bottom: 4px; }
+  .add-form .subtitle { font-size: 13px; color: var(--slate); margin-bottom: 20px; line-height: 1.6; }
+
+  .tip-box {
+    background: var(--amber-lt); border-radius: 10px;
+    padding: 12px 16px; margin-bottom: 20px;
+  }
+  .tip-box h4 { font-size: 12px; font-weight: 700; color: var(--amber); margin-bottom: 6px; }
+  .tip-box p { font-size: 12px; color: var(--slate); line-height: 1.7; }
+
+  .form-label { font-size: 13px; font-weight: 600; color: var(--navy); margin-bottom: 6px; display: block; }
+  .form-label span { font-weight: 400; color: var(--slate); }
+
+  textarea {
+    width: 100%; padding: 14px; border: 1px solid var(--border);
+    border-radius: 10px; font-size: 13px; color: var(--navy);
+    line-height: 1.6; resize: vertical; font-family: 'DM Sans', sans-serif;
+    outline: none; transition: border-color 0.15s;
+  }
+  textarea:focus { border-color: var(--teal); }
+
+  .api-key-wrap { margin-bottom: 16px; }
+  .api-key-input {
+    width: 100%; padding: 10px 14px; border: 1px solid var(--border);
+    border-radius: 10px; font-size: 13px; color: var(--navy);
+    font-family: 'DM Sans', monospace; outline: none;
+    transition: border-color 0.15s;
+  }
+  .api-key-input:focus { border-color: var(--teal); }
+  .api-note {
+    font-size: 11px; color: var(--slate); margin-top: 6px; line-height: 1.5;
+  }
+
+  .analyse-btn {
+    width: 100%; margin-top: 16px; background: var(--teal);
+    color: var(--white); border: none; padding: 13px 28px;
+    border-radius: 10px; cursor: pointer; font-weight: 700;
+    font-size: 15px; font-family: 'DM Sans', sans-serif;
+    transition: background 0.2s, opacity 0.2s;
+  }
+  .analyse-btn:hover:not(:disabled) { background: #0a8560; }
+  .analyse-btn:disabled { background: var(--border); cursor: not-allowed; opacity: 0.7; }
+
+  .cta-btn {
+    background: var(--teal); color: var(--white); border: none;
+    padding: 11px 24px; border-radius: 8px; cursor: pointer;
+    font-weight: 700; font-size: 14px; font-family: 'DM Sans', sans-serif;
+    transition: background 0.2s;
+  }
+  .cta-btn:hover { background: #0a8560; }
+
+  .error-box {
+    background: var(--red-lt); color: var(--red); border-radius: 8px;
+    padding: 10px 14px; font-size: 13px; margin-top: 12px;
+  }
+
+  .loading-box {
+    background: var(--teal-lt); color: var(--teal); border-radius: 8px;
+    padding: 10px 14px; font-size: 13px; margin-top: 12px; font-weight: 600;
+  }
+
+  /* ── Compare panel ── */
+  .compare-section { background: var(--white); border-radius: 14px; border: 1px solid var(--border); padding: 20px; margin-bottom: 16px; }
+  .compare-section h3 { font-size: 14px; font-weight: 700; margin-bottom: 14px; color: var(--navy); }
+
+  .leaderboard-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 9px 0; border-bottom: 1px solid var(--border);
+  }
+  .leaderboard-row:last-child { border-bottom: none; }
+
+  .rank-badge {
+    width: 26px; height: 26px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 800; color: var(--white); flex-shrink: 0;
+  }
+
+  .lb-info { flex: 1; min-width: 0; }
+  .lb-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lb-sub  { font-size: 11px; color: var(--slate); }
+
+  .lb-score {
+    width: 38px; height: 38px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 800; flex-shrink: 0;
+  }
+
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+  .stat-card {
+    background: var(--white); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px; text-align: center;
+  }
+  .stat-card .icon { font-size: 26px; margin-bottom: 4px; }
+  .stat-card .val { font-size: 24px; font-weight: 800; color: var(--navy); }
+  .stat-card .lbl { font-size: 10px; color: var(--slate); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px; }
+
+  /* ── Mobile ── */
+  @media (max-width: 600px) {
+    .header { padding: 16px 16px 0; }
+    .header-stats { gap: 12px; }
+    .content { padding: 12px; }
+    .card-details { grid-template-columns: 1fr; }
+    .tabs .tab { padding: 8px 12px; font-size: 12px; }
+    .add-form { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-top">
+      <div class="logo">🏠</div>
+      <div class="header-title">
+        <h1>Property Tracker</h1>
+        <p>Victoria · First Home Buyer · Q1 2027</p>
+      </div>
+      <div class="header-stats" id="header-stats">
+        <div class="stat"><div class="stat-val" id="stat-total">0</div><div class="stat-lbl">Tracked</div></div>
+        <div class="stat"><div class="stat-val" id="stat-buy">0</div><div class="stat-lbl">Buy picks</div></div>
+        <div class="stat"><div class="stat-val" id="stat-missed">0</div><div class="stat-lbl">Missed</div></div>
+        <div class="stat"><div class="stat-val" id="stat-avg">—</div><div class="stat-lbl">Avg score</div></div>
+      </div>
+    </div>
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('tracker')">🏡 Properties</button>
+      <button class="tab" onclick="switchTab('add')">＋ Analyse</button>
+      <button class="tab" onclick="switchTab('compare')">📊 Compare</button>
+    </div>
+  </header>
+
+  <div class="content">
+
+    <!-- Tracker panel -->
+    <div class="panel active" id="panel-tracker">
+      <div class="filters">
+        <div class="filter-group">
+          <button class="filter-btn active" onclick="setFilter('all', this)">All</button>
+          <button class="filter-btn" onclick="setFilter('active', this)">Active</button>
+          <button class="filter-btn" onclick="setFilter('missed', this)">Missed ❌</button>
+        </div>
+        <div class="sort-wrap">
+          <label>Sort:</label>
+          <select onchange="setSort(this.value)">
+            <option value="score">Score</option>
+            <option value="date">Date added</option>
+            <option value="price">Price</option>
+          </select>
+        </div>
+      </div>
+      <div id="cards-container"></div>
+    </div>
+
+    <!-- Add listing panel -->
+    <div class="panel" id="panel-add">
+      <div class="add-form">
+        <h2>Analyse a listing</h2>
+        <p class="subtitle">Paste any listing from realestate.com.au or Domain. Claude scores it against your criteria and saves it to your tracker.</p>
+
+        <div class="tip-box">
+          <h4>💡 Get the best analysis</h4>
+          <p>Copy everything from the listing: address, price guide, description, features, suburb info, school distances. More context = better score.</p>
+        </div>
+
+        <div class="api-key-wrap">
+          <label class="form-label">Anthropic API Key <span>(stored in your browser only, never sent anywhere else)</span></label>
+          <input type="password" class="api-key-input" id="api-key" placeholder="sk-ant-..." oninput="saveApiKey(this.value)">
+          <p class="api-note">Get a free key at <a href="https://console.anthropic.com" target="_blank" style="color:var(--teal)">console.anthropic.com</a> → API Keys. Your key is saved locally in your browser.</p>
+        </div>
+
+        <label class="form-label" style="margin-bottom:6px;">Listing text</label>
+        <textarea id="listing-text" rows="8" placeholder="Paste the full listing here — address, price, description, number of beds/baths, land size, nearby schools, suburb details..."></textarea>
+
+        <label class="form-label" style="margin-top:12px; margin-bottom:6px;">Your personal notes <span>(optional)</span></label>
+        <textarea id="listing-notes" rows="3" placeholder="e.g. Loved the street, agent seemed cagey about roofing, felt small in person..."></textarea>
+
+        <div id="form-status"></div>
+        <button class="analyse-btn" id="analyse-btn" onclick="analyseProperty()">🔍 Analyse this property</button>
+      </div>
+    </div>
+
+    <!-- Compare panel -->
+    <div class="panel" id="panel-compare">
+      <div id="compare-content"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── State ────────────────────────────────────────────────────────────────────
+let properties = [];
+let currentFilter = 'all';
+let currentSort   = 'score';
+
+// ── Persist ──────────────────────────────────────────────────────────────────
+function save() {
+  localStorage.setItem('prop-tracker-v2', JSON.stringify(properties));
+}
+
+function load() {
+  try {
+    const raw = localStorage.getItem('prop-tracker-v2');
+    if (raw) properties = JSON.parse(raw);
+  } catch(e) {}
+}
+
+function saveApiKey(val) {
+  localStorage.setItem('prop-tracker-apikey', val);
+}
+
+function loadApiKey() {
+  return localStorage.getItem('prop-tracker-apikey') || '';
+}
+
+// ── Tab switching ─────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    t.classList.toggle('active', ['tracker','add','compare'][i] === tab);
+  });
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + tab).classList.add('active');
+  if (tab === 'compare') renderCompare();
+}
+
+// ── Filter & sort ─────────────────────────────────────────────────────────────
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderCards();
+}
+
+function setSort(s) {
+  currentSort = s;
+  renderCards();
+}
+
+function getFiltered() {
+  let list = [...properties];
+  if (currentFilter === 'active') list = list.filter(p => !p.missed);
+  if (currentFilter === 'missed') list = list.filter(p => p.missed);
+  if (currentSort === 'score') list.sort((a,b) => b.score - a.score);
+  if (currentSort === 'date')  list.sort((a,b) => new Date(b.addedAt) - new Date(a.addedAt));
+  if (currentSort === 'price') list.sort((a,b) => priceNum(a.price) - priceNum(b.price));
+  return list;
+}
+
+function priceNum(str) {
+  if (!str) return 0;
+  const m = str.replace(/[^0-9]/g,'');
+  return parseInt(m) || 0;
+}
+
+// ── Stats ─────────────────────────────────────────────────────────────────────
+function updateStats() {
+  const total  = properties.length;
+  const buys   = properties.filter(p => p.verdict === 'BUY').length;
+  const missed = properties.filter(p => p.missed).length;
+  const avg    = total ? (properties.reduce((s,p) => s + (p.score||0), 0) / total).toFixed(1) : '—';
+  document.getElementById('stat-total').textContent  = total;
+  document.getElementById('stat-buy').textContent    = buys;
+  document.getElementById('stat-missed').textContent = missed;
+  document.getElementById('stat-avg').textContent    = avg;
+}
+
+// ── Render cards ──────────────────────────────────────────────────────────────
+function renderCards() {
+  updateStats();
+  const container = document.getElementById('cards-container');
+  const list = getFiltered();
+
+  if (list.length === 0) {
+    container.innerHTML = `
+      <div class="empty">
+        <div class="empty-icon">🔍</div>
+        <h3>No properties yet</h3>
+        <p>Paste a listing from realestate.com.au or Domain<br>and Claude will analyse it for you</p>
+        <button class="cta-btn" onclick="switchTab('add')">Analyse your first listing →</button>
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = list.map(p => cardHTML(p)).join('');
+}
+
+function scoreColor(s) {
+  return s >= 7 ? 'var(--teal)' : s >= 5 ? 'var(--amber)' : 'var(--red)';
+}
+
+function verdictClass(v) {
+  return v === 'BUY' ? 'badge-buy' : v === 'WATCH' ? 'badge-watch' : 'badge-pass';
+}
+
+function fmt(n) { return n ? '$' + Math.round(n).toLocaleString() : '—'; }
+
+function cardHTML(p) {
+  const sc = p.score || 0;
+  const pros = (p.pros||[]).map(x => `<div class="detail-item"><span class="dot" style="color:var(--teal)">✓</span>${x}</div>`).join('');
+  const cons = (p.cons||[]).map(x => `<div class="detail-item"><span class="dot" style="color:var(--red)">✗</span>${x}</div>`).join('');
+  const flags = (p.redFlags||[]).length ? `
+    <div class="red-flags">
+      <h4>⚠ Red Flags</h4>
+      ${(p.redFlags||[]).map(f => `<div class="detail-item"><span class="dot">•</span>${f}</div>`).join('')}
+    </div>` : '';
+  const notes = p.notes ? `
+    <div class="card-notes">
+      <h4>Your notes</h4>
+      <p>${p.notes}</p>
+    </div>` : '';
+
+  return `
+  <div class="card" id="card-${p.id}">
+    <div class="card-header ${p.missed ? 'missed' : ''}">
+      <div class="score-ring" style="border-color:${scoreColor(sc)}">
+        <span class="score-num" style="color:${scoreColor(sc)}">${sc}</span>
+        <span class="score-denom">/ 10</span>
+      </div>
+      <div class="card-meta">
+        <div class="card-badges">
+          <span class="badge ${verdictClass(p.verdict)}">${p.verdict||'—'}</span>
+          ${p.missed ? '<span class="badge badge-missed">Missed</span>' : ''}
+          <span class="badge badge-type">${p.type||'Property'}</span>
+        </div>
+        <div class="card-address">${p.address || p.suburb || 'Unknown address'}</div>
+        <div class="card-price">${p.price||'—'} · ${p.suburb||''}</div>
+      </div>
+      <div class="card-actions">
+        <button class="action-btn" onclick="toggleMissed('${p.id}')" title="${p.missed?'Mark active':'Mark missed'}">${p.missed?'🔄':'❌'}</button>
+        <button class="action-btn" onclick="deleteProperty('${p.id}')" title="Delete">🗑</button>
+      </div>
+    </div>
+    <div class="card-pills">
+      ${p.bedrooms  ? `<div class="pill"><span class="pill-lbl">Beds</span><span class="pill-val">${p.bedrooms} 🛏</span></div>` : ''}
+      ${p.bathrooms ? `<div class="pill"><span class="pill-lbl">Baths</span><span class="pill-val">${p.bathrooms} 🚿</span></div>` : ''}
+      ${p.parking   ? `<div class="pill"><span class="pill-lbl">Parking</span><span class="pill-val">${p.parking} 🚗</span></div>` : ''}
+      ${p.landSize  ? `<div class="pill"><span class="pill-lbl">Land</span><span class="pill-val">${p.landSize}</span></div>` : ''}
+      ${p.growthOutlook ? `<div class="pill"><span class="pill-lbl">Growth</span><span class="pill-val" style="color:${p.growthOutlook==='Strong'?'var(--teal)':p.growthOutlook==='Moderate'?'var(--amber)':'var(--red)'}">${p.growthOutlook}</span></div>` : ''}
+      ${p.estimatedMonthly ? `<div class="pill"><span class="pill-lbl">Est. monthly</span><span class="pill-val">${fmt(p.estimatedMonthly)}</span></div>` : ''}
+    </div>
+    <div class="card-summary">${p.summary||''}</div>
+    <button class="card-toggle" onclick="toggleDetails('${p.id}', this)">▼ Show pros, cons & red flags</button>
+    <div class="card-details" id="details-${p.id}">
+      <div class="detail-section pros"><h4>Pros</h4>${pros}</div>
+      <div class="detail-section cons"><h4>Cons</h4>${cons}</div>
+      ${flags}
+      ${notes}
+      <div class="card-date">Added ${new Date(p.addedAt).toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'})}</div>
+    </div>
+  </div>`;
+}
+
+function toggleDetails(id, btn) {
+  const el = document.getElementById('details-' + id);
+  const open = el.classList.toggle('open');
+  btn.textContent = open ? '▲ Hide details' : '▼ Show pros, cons & red flags';
+}
+
+function toggleMissed(id) {
+  properties = properties.map(p => p.id == id ? {...p, missed: !p.missed} : p);
+  save(); renderCards();
+}
+
+function deleteProperty(id) {
+  if (!confirm('Delete this property?')) return;
+  properties = properties.filter(p => p.id != id);
+  save(); renderCards();
+}
+
+// ── Analyse ───────────────────────────────────────────────────────────────────
+async function analyseProperty() {
+  const key     = document.getElementById('api-key').value.trim();
+  const text    = document.getElementById('listing-text').value.trim();
+  const notes   = document.getElementById('listing-notes').value.trim();
+  const statusEl = document.getElementById('form-status');
+  const btn     = document.getElementById('analyse-btn');
+
+  if (!key)  { statusEl.innerHTML = '<div class="error-box">Please enter your Anthropic API key above.</div>'; return; }
+  if (!text) { statusEl.innerHTML = '<div class="error-box">Please paste a listing first.</div>'; return; }
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Analysing...';
+  statusEl.innerHTML = '<div class="loading-box">🔍 Claude is reading the listing and checking your criteria...</div>';
+
+  const system = `You are an expert Australian property analyst helping a first home buyer in Victoria (Sayam).
+
+BUYER PROFILE:
+- Budget: $950k–$1.15M (ideally under $1.05M)
+- Deposit: ~$240k cash (after stamp duty ~$182k remains)
+- Monthly budget: $7,500 total (mortgage + all costs)
+- Timeline: Q1 2027 target but open to a great deal sooner
+- Savings: $200k now, saving $7.5k/month
+
+NON-NEGOTIABLES (score down heavily if missing):
+- 3 bed 2 bath minimum
+- 30–35 min drive to Melbourne CBD on weekends
+- 45–50 min public transport to work on weekdays (8am)
+- Nearby public transport
+- Backyard or courtyard
+- Park within ~500m
+- Nearby gym + pilates
+- Central heating and cooling
+- Natural lighting
+
+NICE TO HAVE:
+- Walk-in robe with ensuite
+- Front yard
+- Outdoor entertaining / patio / deck
+- Quality daycare nearby
+- Café and eatery proximity
+
+Respond ONLY with valid JSON — no markdown, no preamble, no explanation outside the JSON:
+{
+  "address": "full street address",
+  "price": "price or range as string",
+  "suburb": "suburb name",
+  "type": "House / Townhouse / Apartment / Unit",
+  "bedrooms": number,
+  "bathrooms": number,
+  "parking": number or null,
+  "landSize": "land size string or null",
+  "score": number 1-10,
+  "verdict": "BUY / WATCH / PASS",
+  "pros": ["pro 1", "pro 2", "pro 3"],
+  "cons": ["con 1", "con 2"],
+  "estimatedLoan": number,
+  "estimatedMonthly": number,
+  "growthOutlook": "Strong / Moderate / Weak",
+  "summary": "2-3 sentence sharp analysis for this specific buyer",
+  "redFlags": ["flag 1"] or []
+}`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system,
+        messages: [{ role: 'user', content: `Analyse this listing:\n\n${text}` }]
+      })
+    });
+
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+
+    const raw   = (data.content||[]).map(b => b.text||'').join('');
+    const clean = raw.replace(/```json|```/g,'').trim();
+    const result = JSON.parse(clean);
+
+    const newProp = {
+      ...result,
+      id: Date.now(),
+      notes: notes || '',
+      missed: false,
+      addedAt: new Date().toISOString()
+    };
+
+    properties.unshift(newProp);
+    save();
+
+    document.getElementById('listing-text').value  = '';
+    document.getElementById('listing-notes').value = '';
+    statusEl.innerHTML = '<div class="loading-box" style="background:var(--teal-lt);color:var(--teal);">✅ Property saved! Switching to tracker...</div>';
+
+    setTimeout(() => {
+      switchTab('tracker');
+      renderCards();
+      statusEl.innerHTML = '';
+    }, 1200);
+
+  } catch(err) {
+    statusEl.innerHTML = `<div class="error-box">❌ Error: ${err.message}. Check your API key and try again.</div>`;
+  }
+
+  btn.disabled = false;
+  btn.textContent = '🔍 Analyse this property';
+}
+
+// ── Compare ───────────────────────────────────────────────────────────────────
+function renderCompare() {
+  const el = document.getElementById('compare-content');
+  if (properties.length === 0) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">📊</div><h3>Nothing to compare yet</h3><p>Add some properties first</p></div>';
+    return;
+  }
+
+  const sorted  = [...properties].sort((a,b) => b.score - a.score);
+  const missed  = properties.filter(p => p.missed);
+  const total   = properties.length;
+  const buys    = properties.filter(p => p.verdict==='BUY').length;
+  const watches = properties.filter(p => p.verdict==='WATCH').length;
+  const passes  = properties.filter(p => p.verdict==='PASS').length;
+  const avg     = total ? (properties.reduce((s,p)=>s+(p.score||0),0)/total).toFixed(1) : '—';
+
+  const rankColors = ['var(--amber)','var(--slate)','var(--border)'];
+
+  el.innerHTML = `
+    <div class="compare-section">
+      <h3>📈 Score leaderboard</h3>
+      ${sorted.map((p,i) => `
+        <div class="leaderboard-row">
+          <div class="rank-badge" style="background:${rankColors[i]||'var(--border)'}">${i+1}</div>
+          <div class="lb-info">
+            <div class="lb-name">${p.address||p.suburb||'Unknown'}</div>
+            <div class="lb-sub">${p.price||'—'} · ${p.type||'Property'}</div>
+          </div>
+          ${p.missed ? '<span class="badge badge-missed">Missed</span>' : ''}
+          <span class="badge ${verdictClass(p.verdict)}">${p.verdict||'—'}</span>
+          <div class="lb-score" style="border:2px solid ${scoreColor(p.score||0)};color:${scoreColor(p.score||0)}">${p.score||'—'}</div>
+        </div>`).join('')}
+    </div>
+
+    ${missed.length ? `
+    <div class="compare-section">
+      <h3>❌ Missed properties (${missed.length})</h3>
+      ${missed.map(p => `
+        <div style="padding:10px 14px;background:var(--red-lt);border-radius:8px;margin-bottom:8px;">
+          <div style="font-size:13px;font-weight:700;">${p.address||p.suburb}</div>
+          <div style="font-size:12px;color:var(--slate);margin-top:3px;">${p.price||'—'} · Score ${p.score||'—'}/10 · ${p.type||'Property'}</div>
+          ${p.notes ? `<div style="font-size:12px;color:var(--slate);margin-top:4px;font-style:italic">"${p.notes}"</div>` : ''}
+        </div>`).join('')}
+    </div>` : ''}
+
+    <div class="stats-grid">
+      <div class="stat-card"><div class="icon">⭐</div><div class="val">${avg}</div><div class="lbl">Avg score</div></div>
+      <div class="stat-card"><div class="icon">✅</div><div class="val">${buys}</div><div class="lbl">BUY verdicts</div></div>
+      <div class="stat-card"><div class="icon">👀</div><div class="val">${watches}</div><div class="lbl">WATCH</div></div>
+      <div class="stat-card"><div class="icon">❌</div><div class="val">${passes}</div><div class="lbl">PASS</div></div>
+      <div class="stat-card"><div class="icon">🏠</div><div class="val">${properties.filter(p=>!p.missed).length}</div><div class="lbl">Active</div></div>
+      <div class="stat-card"><div class="icon">😔</div><div class="val">${missed.length}</div><div class="lbl">Missed</div></div>
+    </div>`;
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+load();
+document.getElementById('api-key').value = loadApiKey();
+renderCards();
+</script>
+</body>
+</html>
